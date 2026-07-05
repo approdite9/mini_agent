@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 测试与工具缓存
+.pytest_cache/
+.coverage
+
+# macOS
+.DS_Store
+
+# IDE / 助手本地配置
+.claude/
+.codebuddy/
+.vscode/
+.idea/
+
+# 本地运行产物（评测留痕、报告默认不入库；需要归档时显式挑选提交）
+eval_runs/
+report.json
+
+# 运行时数据目录（默认在 ~/.mini_agent，此处兜底）
+.mini_agent/

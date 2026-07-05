@@ -1,0 +1,7 @@
+{
+  "provider": "qwen",
+  "model": null,
+  "repeat": 1,
+  "families": ["tool_correctness", "multi_step", "memory_multiturn",
+               "error_recovery", "budget_adherence", "policy_enforcement"]
+}

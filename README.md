@@ -1,4 +1,4 @@
-# mini_agent — 手搓的 Agent Runtime（AgentOS）
+# mini_agent — 无框架 Agent Runtime（AgentOS）
 
 不依赖 LangGraph / AutoGen / CrewAI 等任何 Agent 框架，内核纯 Python 标准库（仅
 官方 `anthropic` / `openai` 两个 SDK 用于真实调用）。这不只是一个 Agent，而是一个

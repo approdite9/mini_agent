@@ -37,6 +37,20 @@ class TestMemoryStorePersistence(unittest.TestCase):
         self.assertIn("短: ok", index)
         self.assertNotIn("x" * 30, index)
 
+    def test_render_index_caps_entries(self):
+        # 条数上限：只保留最近写入的 max_entries 条 + 溢出提示，索引体积双维有界
+        items = {f"k{i}": "v" for i in range(60)}
+        index = MemoryStore.render_index(items, max_entries=50)
+        self.assertIn("共 60 条", index)
+        self.assertIn("memory list", index)   # 引导模型主动召回全量
+        self.assertIn("- k59: v", index)      # 最近写入的保留
+        self.assertNotIn("- k0: v", index)    # 最早的被挤出索引
+        self.assertEqual(index.count("- k"), 50)
+
+    def test_render_index_no_hint_within_cap(self):
+        index = MemoryStore.render_index({"a": "1", "b": "2"}, max_entries=50)
+        self.assertNotIn("memory list", index)  # 未超限不加提示行，保持索引稳定
+
 
 class TestSessionPersistence(unittest.TestCase):
     def test_sessions_survive_restart(self):

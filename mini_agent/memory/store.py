@@ -6,9 +6,15 @@
 3. 全局记忆   = MemoryStore（本文件），跨会话共享、磁盘 JSON 持久化、带更新时间与来源
 
 注入策略（性能考量）：
-- system prompt 只注入"记忆索引"（键 + 截断摘要），保持 prompt 精简；
+- system prompt 只注入"记忆索引"（键 + 值截断 60 字 + 条数上限 50，双维有界），
+  保持 prompt 精简；超出条数时提示模型用 memory list 查看全量；
 - 完整值由模型通过 memory 工具按需 get —— 避免记忆膨胀撑爆上下文，
   同时记忆变化只影响 system 中独立的记忆块，不打穿核心 prompt 的缓存前缀。
+
+召回时机：
+- 被动召回：ReAct 循环每轮组装请求时重新渲染索引（run 中途的写入下一轮即可见）；
+- 主动召回：模型对照索引按需调用 memory get 取完整值，结果以 tool_result 进历史；
+- 写入：用户要求"记住"的信息由模型调用 memory save 落盘（core prompt 行为准则）。
 """
 
 from __future__ import annotations
@@ -83,12 +89,24 @@ class MemoryStore:
 
     # ------------------------------------------------------------------
     @staticmethod
-    def render_index(items: Dict[str, str], value_limit: int = 60) -> str:
-        """渲染记忆索引：键 + 截断的值。完整值靠 memory 工具 get。"""
+    def render_index(items: Dict[str, str], value_limit: int = 60,
+                     max_entries: int = 50) -> str:
+        """渲染记忆索引：键 + 截断的值。完整值靠 memory 工具 get。
+
+        索引体积双维有界：值截断（value_limit 字）× 条数上限（max_entries 条）。
+        条数超限时保留最近写入的 max_entries 条（dict 按插入序，取尾部），
+        并在首行提示全量条目可用 memory list 查看 —— 记忆规模再大，
+        每轮注入的索引成本也是常数级。"""
         if not items:
             return "(空)"
+        keys = list(items)
         lines = []
-        for key, value in items.items():
+        if len(keys) > max_entries:
+            lines.append(f"(共 {len(keys)} 条，此处仅列最近写入的 {max_entries} 条，"
+                         f"全部条目用 memory list 查看)")
+            keys = keys[-max_entries:]
+        for key in keys:
+            value = items[key]
             short = value if len(value) <= value_limit else value[: value_limit - 1] + "…"
             lines.append(f"- {key}: {short}")
         return "\n".join(lines)
